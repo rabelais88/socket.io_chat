@@ -9,7 +9,8 @@ app.get("/",function(req,res){
   });
 });
 
-http.listen(3000,function(){
+//process.env.PORT lets the port be set by Heroku
+http.listen(process.env.PORT || 3000,function(){
   console.log("server up!");
 });
 
