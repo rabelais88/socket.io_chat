@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      window.onload = function(){
+        
+        var socket = io();
+        var btn = document.getElementById("sender");
+        var txt = document.getElementById("texter");
+        var msgs = document.getElementById("messages");
+        var rmdisp = document.getElementById("roomname");
+        var roomname = prompt("which room do you want to join to?");
+
+        var userDisplay = prompt("what name are you going to use?");
+        rmdisp.innerHTML = "you(" + userDisplay +") are in room " + roomname;
+
+        socket.emit("joinroom",roomname);
+
+        btn.addEventListener("click",function(){
+          var data = {msg:txt.value, roomname:roomname, userid:userDisplay};
+          socket.emit("chat message", data);
+          console.log(data);
+          msgs.innerHTML += "self - " + data.msg + "<br>\n";
+          txt.value = "";
+        });
+
+        socket.on("chat message", function(data){
+          console.log(data);
+          msgs.innerHTML += data.userid + " - " + data.msg + "<br>\n";
+        });
+
+      }
+    </script>
+  </head>
+  <body>
+  <div id="roomname"></div>
+  input your message here
+  <input type="text" id="texter"/>
+  <input type="button" id="sender" value="send"/>
+  <div id="messages"></div>
+  </body>
+</html>
