@@ -1,43 +1,161 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <title>채팅 프로그램</title>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
     <script>
-      window.onload = function(){
+      var data = {userid:"",roomname:"generic",msg:""};
+      var socket = io();
+      $(document).bind("pageinit", function(){
+
+        $("#popName").popup({history:false});
+        $("#popWrong").popup({history:false});
+        $("#popRoom").popup({history:false});
+        $("#popOpen").attr("href", "#popName");
+        $("#popOpen").trigger("click");
         
-        var socket = io();
-        var btn = document.getElementById("sender");
-        var txt = document.getElementById("texter");
-        var msgs = document.getElementById("messages");
-        var rmdisp = document.getElementById("roomname");
-        var roomname = prompt("which room do you want to join to?");
+        socket.emit("joinroom",data);
+        $("#roomdisplay").html("(전체방)");
+  
+        socket.on("chat message",function(recvdata){
+          console.log(recvdata);
+          var newmsg = recvdata.userid + " - " + recvdata.msg + "(" + curTime() + ")";
+          addMessage(newmsg);
+        });
 
-        var userDisplay = prompt("what name are you going to use?");
-        rmdisp.innerHTML = "you(" + userDisplay +") are in room " + roomname;
+        socket.on("newuser",function(recvdata){
+          console.log(recvdata.userid);
+          addMessage("새 사용자(" + recvdata.userid + ")가 입장하였습니다");
+        });
 
-        socket.emit("joinroom",roomname);
+        $("#texter").on("keypress",function(e){
+          if(e.charCode === 13){
+            sendMessage();
+          };
+        });
 
-        btn.addEventListener("click",function(){
-          var data = {msg:txt.value, roomname:roomname, userid:userDisplay};
+        $("#sender").on("click",function(){
+          sendMessage();
+        });
+
+        $("#btnRoom").on("click",function(){
+          if($("#txtRoom").val()){
+            data.roomname = $("#txtRoom").val();
+            addMessage(data.roomname + "방 대화에 참여합니다.");
+            $("#roomdisplay").html("(" + data.roomname + ")");
+            socket.emit("joinroom",data);
+          }else{
+            alert("잘못된 방 입력입니다.");
+          }
+        });
+
+        $("#btnName").on("click",function(){
+          if($("#txtName").val()){
+            console.log($("#txtName").val() + "");
+            var newmsg = $("#txtName").val() + "이(가) 입장했습니다";
+            data.userid = $("#txtName").val() + "";
+            socket.emit("set_userid", data);
+            addMessage(newmsg);
+          }else{
+            $("#popName").popup( "close" );
+            $("#popOpen").attr("href","#popWrong");
+            $("#popOpen").trigger("click");
+          }
+
+          $("#btnWrongConfirm").on("click",function(){
+            $("#popWrong").popup("close");
+            $("#popOpen").attr("href","#popName");
+            $("#popOpen").trigger("click");
+          });
+        });
+      });
+
+      function sendMessage(){
+        var targetmsg = $("#texter").val();
+        $("#texter").val("");
+        if(targetmsg){
+          data.msg = targetmsg;
+          addMessage(data.userid + " - " + targetmsg + "(" + curTime() + ")");
           socket.emit("chat message", data);
           console.log(data);
-          msgs.innerHTML += "self - " + data.msg + "<br>\n";
-          txt.value = "";
-        });
+        }
+      }
 
-        socket.on("chat message", function(data){
-          console.log(data);
-          msgs.innerHTML += data.userid + " - " + data.msg + "<br>\n";
-        });
+      function addMessage(newmsg){
+        var tmpmsg = "<li>" + newmsg + "</li>";
+        $(tmpmsg).prependTo("#messages");
+        $("#messages").listview("refresh");
+      }
 
+      function curTime(){
+        var d = new Date();
+        return d.toLocaleTimeString();
       }
     </script>
   </head>
   <body>
-  <div id="roomname"></div>
-  input your message here
-  <input type="text" id="texter"/>
-  <input type="button" id="sender" value="send"/>
-  <div id="messages"></div>
+  <div data-role="page">
+    <div data-role="header">
+      <a href="#popInfo" data-rel="popup" class="ui-btn-left ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-left ui-icon-info">대하여</a>
+      <h3>성렬이 채팅 프로그램<span id="roomdisplay"></span></h3>
+      <a href="#popRoom" data-rel="popup" id="newroom" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right ui-icon-gear">다른 방 들어가기</a>
+    </div>
+    <input type="text" id="texter"/>
+    <input type="button" id="sender" value="보내기"/>
+
+    <ul data-role="listview" id="messages">
+      <li>메시지를 입력하세요</li>
+    </ul>
+
+    <a href="#popName" id="popOpen" data-rel="popup" style="display:none;"></a>
+
+    <div data-role="popup" data-position-to="window" id="popRoom" data-dismissible="false" data-overlay-theme="b">
+      <div data-role="header" data-theme="a">
+        <h1>방 입력</h1>
+      </div>
+      <div role="main" class="ui-content">
+        <h3 class="ui-title">만들거나 참여할 방 이름을 입력해주세요</h3>
+        <input type="text" id="txtRoom"/>
+        <a href="#" id="btnRoom" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
+      </div>
+    </div>
+
+    <div data-role="popup" data-position-to="window" id="popName" data-dismissible="false" data-overlay-theme="b">
+        <div data-role="header" data-theme="a">
+          <h1>이름 입력</h1>
+        </div>
+        <div role="main" class="ui-content">
+          <h3 class="ui-title">채팅에 사용할 이름을 입력해주세요</h3>
+          <input type="text" id="txtName"/>
+          <a href="#" id="btnName" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
+        </div>
+      </div>
+
+    <div data-role="popup" data-position-to="window" id="popWrong" data-dismissible="false" data-overlay-theme="b">
+      <div role="main" class="ui-content" data-theme="a">
+        <h3 class="ui-title">잘못된 입력입니다</h3>
+        <a href="#" id="btnWrongConfirm" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
+      </div>
+    </div>
+
+    <div data-role="popup" data-position-to="window" id="popInfo" data-dismissible="false" data-overlay-theme="b">
+        <div role="main" class="ui-content" data-theme="a">
+          <h3 class="ui-title">앱 제작일: 2017.12.10</h3>
+          node.js 및 socket.io 학습 목적으로 제작한 채팅 앱입니다.<br>
+          모바일 환경에 최적화되어있습니다.<br>
+          <h4>사용된 라이브러리:</h4>
+          <ul>
+            <li>jquery mobile</li>
+            <li>express</li>
+            <li>socket.io</li>
+          </ul>
+          서버:heroku
+          <a href="#" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
+        </div>
+      </div>
+  </div>
   </body>
 </html>
