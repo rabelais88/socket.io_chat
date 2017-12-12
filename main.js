@@ -2,11 +2,19 @@ var app = require("express")();
 var http = require("http").Server(app);
 var fs = require("fs");
 var io = require("socket.io")(http);
+var users = {};
+var rooms = {};
 
 app.get("/",function(req,res){
   fs.readFile("main.html","utf8",function(error,data){
     res.send(data);
   });
+});
+
+
+
+app.get("/userlist",function(req,res){
+  res.send(users);
 });
 
 //process.env.PORT lets the port be set by Heroku
@@ -16,8 +24,12 @@ http.listen(process.env.PORT || 3000,function(){
 
 io.on("connection", function(socket){
   console.log("a user connected");
+  users[socket.id] = "익명(Anonymous)";
   socket.on("disconnect", function(){
-    console.log("user(" + socket.id +") disconnected");
+    //use "io".emit when sending to everyone
+    io.emit("leftroom", users[socket.id]);
+    console.log("user(" + users[socket.id] + " => " + socket.id +") disconnected");
+    delete users[socket.id];
   });
 
   socket.on("chat message", function(data){
@@ -35,5 +47,6 @@ io.on("connection", function(socket){
   socket.on("set_userid",function(data){
     console.log(data.roomname + ": socketid " + socket.id + " set as " + data.userid);
     socket.to(data.roomname).emit("newuser", data);
+    users[socket.id] = data.userid;
   });
 });

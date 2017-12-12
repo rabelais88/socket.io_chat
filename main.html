@@ -30,6 +30,12 @@
         socket.on("newuser",function(recvdata){
           console.log(recvdata.userid);
           addMessage("새 사용자(" + recvdata.userid + ")가 입장하였습니다");
+          updateUsers();
+        });
+
+        socket.on("leftroom",function(recvdata){
+          console.log(recvdata + " - left");
+          updateUsers();
         });
 
         $("#texter").on("keypress",function(e){
@@ -60,6 +66,7 @@
             data.userid = $("#txtName").val() + "";
             socket.emit("set_userid", data);
             addMessage(newmsg);
+            updateUsers();
           }else{
             $("#popName").popup( "close" );
             $("#popOpen").attr("href","#popWrong");
@@ -95,15 +102,35 @@
         var d = new Date();
         return d.toLocaleTimeString();
       }
+
+
+      //used ajax as quick db substitute
+      function updateUsers(){
+        // dummy data is sent to prevent internet explorer oddities
+        $.getJSON("/userlist",{dummy:new Date().getTime()},function(data){
+          //jquery supports object iteration
+          var k=0;
+          $("#listuser").empty();
+          $.each(data,function(key,val){
+            k++;
+            $("#listuser").append("<li>" + val +  "</li>");
+          });
+          $("#btnUsers").text("현재 참여자 - " + k + "명");
+          $("#useramt").text(k + "명");
+        });
+      }
+
+
     </script>
   </head>
   <body>
   <div data-role="page">
     <div data-role="header">
       <a href="#popInfo" data-rel="popup" class="ui-btn-left ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-left ui-icon-info">대하여</a>
-      <h3>성렬이 채팅 프로그램<span id="roomdisplay"></span></h3>
+      <h3>성렬이 채팅<span id="roomdisplay"></span><span id="useramt"> 명</span></h3>
       <a href="#popRoom" data-rel="popup" id="newroom" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right ui-icon-gear">다른 방 들어가기</a>
     </div>
+
     <input type="text" id="texter"/>
     <input type="button" id="sender" value="보내기"/>
 
@@ -120,7 +147,8 @@
       <div role="main" class="ui-content">
         <h3 class="ui-title">만들거나 참여할 방 이름을 입력해주세요</h3>
         <input type="text" id="txtRoom"/>
-        <a href="#" id="btnRoom" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
+        <a href="#" id="btnRoom" class="ui-btn ui-corner-all ui-shadow ui-btn-inline ui-btn-b" data-rel="back" data-transition="flow">확인</a>
+        <a href="#" class="ui-btn ui-corner-all ui-shadow ui-btn-inline ui-btn-b" data-rel="back">취소</a>
       </div>
     </div>
 
@@ -142,6 +170,15 @@
       </div>
     </div>
 
+    <div data-role="popup" data-position-to="window" id="popUsers" data-dismissible="false" data-overlay-theme="b">
+        <div role="main" class="ui-content" data-theme="a">
+          <h3 class="ui-title">현재 대화에 참여중인 사람들</h3>
+          <ul id="listuser">
+          </ul>
+          <a href="#" id="btnUserConfirm" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
+        </div>
+      </div>
+
     <div data-role="popup" data-position-to="window" id="popInfo" data-dismissible="false" data-overlay-theme="b">
         <div role="main" class="ui-content" data-theme="a">
           <h3 class="ui-title">앱 제작일: 2017.12.10</h3>
@@ -157,6 +194,14 @@
           <a href="#" class="ui-btn ui-corner-all ui-shadow ui-btn-block" data-rel="back" data-transition="flow">확인</a>
         </div>
       </div>
+      <div data-role="footer" data-position="fixed" style="display:fixed;";>
+          <div data-role="navbar" class="ui-bar" data-iconpos="left">
+              <ul>
+                <li><a href="#popUsers" data-rel="popup" id="btnUsers" data-icon="search">현재 대화 참여자 - 명</a></li>
+              </ul>
+            </div>
+          </div>
   </div>
+
   </body>
 </html>
